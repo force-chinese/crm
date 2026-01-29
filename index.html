@@ -1,9 +1,18 @@
+<!--
+Force CRM POC System
+Copyright © Force Fox (Force Cheng) x FALO LAB
+
+Created: 2026-01-01 (v1.01)
+Latest : 2026-01-29 (v2.05)
+
+This file is provided for demo / POC purposes.
+-->
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>宏大 CRM 系統 (Phase 1)</title>
+    <title>Force CRM POC 系統 (Phase 1)</title>
     <!-- SheetJS for Excel processing -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <style>
@@ -71,6 +80,16 @@
             border-top: 1px solid var(--border-color);
             background-color: var(--surface-color);
             margin-top: auto;
+            line-height: 1.6;
+        }
+        
+        footer a {
+            color: #9aa0a6;
+            text-decoration: none;
+        }
+        footer a:hover {
+            text-decoration: underline;
+            color: var(--primary-color);
         }
 
         /* Tabs */
@@ -398,6 +417,34 @@
             background-color: #d2e3fc;
         }
 
+        /* Author Section */
+        .author-box {
+            background-color: #f8f9fa;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        .author-box h3 {
+            margin-top: 0;
+            color: var(--primary-color);
+            font-size: 16px;
+        }
+        .author-box p {
+            font-size: 13px;
+            line-height: 1.6;
+            color: #3c4043;
+            margin-bottom: 10px;
+        }
+        .author-box a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .author-box a:hover {
+            text-decoration: underline;
+        }
+
         /* Status Messages */
         .status-box {
             padding: 15px;
@@ -542,7 +589,7 @@
 <div id="toast">已複製到剪貼簿</div>
 
 <header>
-    <h1>宏大 CRM 系統 <span style="font-size: 0.8em; color: #5f6368; font-weight: normal;">(Phase 1)</span></h1>
+    <h1>Force CRM POC 系統 <span style="font-size: 0.8em; color: #5f6368; font-weight: normal;">(Phase 1)</span></h1>
     <div id="system-status" style="font-size: 12px; color: #5f6368;">等待資料匯入...</div>
 </header>
 
@@ -695,7 +742,7 @@
                         </div>
                     </div>
 
-                    <!-- Recent Activity Report Control (New v2.04) -->
+                    <!-- Recent Activity Report Control -->
                     <div class="report-group" style="width: 100%;">
                         <label>近期異動報表 (Recent Activity)</label>
                         <div class="date-pills">
@@ -781,13 +828,26 @@
                 </div>
             </a>
 
+            <!-- Author Info Block -->
+            <div class="author-box">
+                <h3>【作者介紹】</h3>
+                <p><strong>Force Fox（原力狐老師）</strong><br>
+                Force CRM POC 系統設計者，FALO LAB。</p>
+                <p>曾於多家台灣知名企業擔任跨部門與多項專案角色，具備資料、系統與營運整合實務經驗。<br>
+                近年專注於 AI 導入的治理與管控，特別是 ISO/IEC 42001 人工智慧管理系統相關研究與落地實作。</p>
+                <p>LinkedIn：<br>
+                <a href="https://www.linkedin.com/in/force-cheng-taiwan/" target="_blank">https://www.linkedin.com/in/force-cheng-taiwan/</a></p>
+            </div>
+
         </div>
     </div>
 </div>
 
 <!-- Footer -->
 <footer>
-    &copy; Force Cheng 2026/1/29 v2.04
+    Force CRM POC 系統 V2.05 | Last update: 2026/01/29<br>
+    Copyright © Force Fox 原力狐老師 × FALO LAB<br>
+    Force Cheng LinkedIn: <a href="https://www.linkedin.com/in/force-cheng-taiwan/" target="_blank">https://www.linkedin.com/in/force-cheng-taiwan/</a>
 </footer>
 
 <!-- Modal for Details -->
@@ -849,7 +909,8 @@
         // Init Age Preset
         applyAgePreset();
         // Init Activity Date (Default Last 7 days)
-        setQuickDate('last7', document.querySelector('.date-pill.active'));
+        const activePill = document.querySelector('.date-pill.active');
+        if(activePill) setQuickDate('last7', activePill);
     };
 
     // --- Helpers: Date & Format ---
@@ -1650,29 +1711,9 @@
         }
 
         // Map data
-        // For Activity Reports: User wants "Full Version" regardless of display mode.
-        // If currentDataType is activity_member or activity_interview, we need to export ALL joined fields.
-        // However, "Full View" in UI already exposes all keys.
-        // If "Simple View" is active, getHeaders() returns fewer cols.
-        // We should detect this and use a broader set of headers if exporting an Activity Report.
-        
-        let exportHeaders = headers;
-        if (currentDataType === 'activity_member' || currentDataType === 'activity_interview') {
-             // Force use all keys from the first row of source data
-             if (exportSource.length > 0) {
-                 const allKeys = Object.keys(exportSource[0]);
-                 // Filter out our UI-specific 'friendly names' if we want raw data, OR keep them.
-                 // The requirement says "Members_DB 的全部欄位".
-                 // currentRawData has merged fields. Let's just dump everything available in the object for simplicity and completeness.
-                 exportHeaders = allKeys.filter(k => k !== 'calculatedAge' && !COLS_DEF[currentDataType].includes(k)); // internal props
-                 // Combine friendly headers + raw headers
-                 exportHeaders = [...COLS_DEF[currentDataType], ...exportHeaders];
-             }
-        }
-
         const exportData = exportSource.map(row => {
             const newRow = {};
-            exportHeaders.forEach(h => {
+            headers.forEach(h => {
                 // Use smart formatted value for export too
                 newRow[h] = smartFormatDate(row[h], h);
             });
