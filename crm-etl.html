@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hongda Trans Converter｜Step1 Members_DB</title>
+    <meta name="description" content="Hongda Membership Data ETL Tool">
+    <meta name="author" content="Force Cheng">
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS (xlsx) -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <style>
+        /* Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+
+        body {
+            font-family: 'Roboto', 'Noto Sans TC', sans-serif;
+            background-color: #f8f9fa; /* Google Light Gray */
+        }
+        
+        .google-shadow {
+            box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
+        }
+
+        .google-btn {
+            transition: background-color 0.2s, box-shadow 0.2s;
+        }
+        .google-btn:hover {
+            box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
+        }
+        .google-btn:active {
+            background-color: #e8eaed;
+        }
+
+        /* Tabs Styling */
+        .tab-active {
+            color: #1a73e8;
+            border-bottom: 2px solid #1a73e8;
+        }
+        .tab-inactive {
+            color: #5f6368;
+            border-bottom: 2px solid transparent;
+        }
+        .tab-inactive:hover {
+            color: #202124;
+            background-color: #f1f3f4;
+        }
+
+        /* Custom Scrollbar */
+        .table-container::-webkit-scrollbar {
+            height: 8px;
+        }
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .table-container::-webkit-scrollbar-thumb {
+            background: #dadce0;
+            border-radius: 4px;
+        }
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #bdc1c6;
+        }
+
+        /* Print Styles */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .print-area, .print-area * {
+                visibility: visible;
+            }
+            .print-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                background-color: white;
+                padding: 20px;
+            }
+            .no-print {
+                display: none !important;
+            }
+            /* Ensure background colors print */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+        
+        /* Modal Animation */
+        .modal-enter {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        .modal-enter-active {
+            opacity: 1;
+            transform: scale(1);
+            transition: opacity 300ms, transform 300ms;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        
+        // --- Configuration ---
+        const LAST_UPDATE = "2026/1/29 ver 2.08"; 
+
+        // --- Icons (Inline SVG) ---
+        const Upload = (props) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>);
+        const FileSpreadsheet = (props) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"/><path d="M14 2v6h6"/><path d="M4 15h18"/><path d="M4 18h18"/><path d="M10 22v-7"/><path d="M10 15H4"/></svg>);
+        const Download = (props) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>);
+        const RefreshCw = (props) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>);
+        const AlertCircle = (props) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>);
+        const CheckCircle2 = (props) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>);
+        const FileType = (props) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13v-1h6v1"/><path d="M12 12v6"/><path d="M11 18h2"/></svg>);
+        const Info = (props) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>);
+        const ChevronLeft = (props) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="15 18 9 12 15 6"/></svg>);
+        const ChevronRight = (props) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="9 18 15 12 9 6"/></svg>);
+        const User = (props) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>);
+        const Keyboard = (props) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect width="20" height="16" x="2" y="4" rx="2" ry="2"/><path d="M6 8h.001"/><path d="M10 8h.001"/><path d="M14 8h.001"/><path d="M18 8h.001"/><path d="M6 12h.001"/><path d="M10 12h.001"/><path d="M14 12h.001"/><path d="M18 12h.001"/><path d="M7 16h10"/></svg>);
+        const Printer = (props) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>);
+        const Save = (props) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>);
+        const X = (props) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M18 6 6 18"/><path d="m6 6 18 12"/></svg>);
+        const List = (props) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>);
+        const Wand2 = (props) => (<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m19 2 2 2-2 2"/><path d="m13 6 2 2-2 2"/><path d="m11 6-2 2 2 2"/><path d="m8 12 2 2-2 2"/><path d="m13 14 2 2-2 2"/><path d="m5 13 4 4L22 4.1 19.9 2"/></svg>);
+
+
+        // --- Constants & Mapping ---
+
+        const TARGET_HEADERS = [
+            "member_id", "id_number", "id_number_masked", "name", "gender", 
+            "birthday", "ethnicity", "mobile_phone", "home_phone", "email", 
+            "address_city", "address_district", "address_detail", "occupation", 
+            "company_name", "job_title", "education_level", "education_major", 
+            "employment_status", "assigned_to", "created_at", "updated_at", 
+            "data_source", "web_member_id", "memo1", "memo2", "etl_id_ref", "updated_by"
+        ];
+
+        // Chinese Translation for UI Fields (Tab 1)
+        const DB_FIELD_TRANSLATIONS = {
+            member_id: "會員ID",
+            id_number: "身分證字號",
+            id_number_masked: "身分證(遮罩)",
+            name: "姓名",
+            gender: "性別",
+            birthday: "出生日期",
+            ethnicity: "種族/原住民",
+            mobile_phone: "行動電話",
+            home_phone: "市內電話",
+            email: "電子郵件",
+            address_city: "縣市",
+            address_district: "行政區",
+            address_detail: "詳細地址",
+            occupation: "職業",
+            company_name: "公司/服務單位",
+            job_title: "職稱",
+            education_level: "教育程度",
+            education_major: "科系",
+            employment_status: "就業狀態",
+            assigned_to: "負責人",
+            created_at: "建立時間",
+            updated_at: "更新時間",
+            data_source: "資料來源",
+            web_member_id: "官網會員編號",
+            memo1: "備註1",
+            memo2: "備註2",
+            etl_id_ref: "ETL追溯碼",
+            updated_by: "更新者"
+        };
+
+        // Fields that are system generated (User cannot edit these in Manual mode)
+        const SYSTEM_FIELDS = [
+            "member_id", "id_number_masked", "etl_id_ref", "data_source", "created_at", "updated_at"
+        ];
+
+        const SOURCE_TYPES = [
+            { id: "F01", name: "F01｜1105產業新尖兵-報名學員名單" },
+            { id: "F02", name: "F02｜1105產業新尖兵-錄訓名冊" },
+            { id: "F03", name: "F03｜不動產經紀營業員_訂單資料" },
+            { id: "F04", name: "F04｜宏大網站的會員資料" },
+            { id: "F05", name: "F05｜照顧服務員-報名資料" },
+            { id: "F06", name: "F06｜產投下載的學員名單" },
+            { id: "F07", name: "F07｜自費班_訂單資料" },
+        ];
+
+        // Only needed for Batch conversion
+        const MAPPING_DICT = {
+            "身分證": "id_number", "身分證字號": "id_number", "身份證": "id_number", "身份證明文件字號": "id_number", "身分證明文件字號": "id_number",
+            "姓名": "name", "會員名稱": "name", "學員姓名": "name",
+            "性別": "gender",
+            "生日": "birthday", "出生日期": "birthday", "出生年月日": "birthday",
+            "手機": "mobile_phone", "行動電話": "mobile_phone", "電話": "mobile_phone",
+            "市話": "home_phone", "連絡電話": "home_phone", "連絡電話(日)": "home_phone", "連絡電話(夜)": "home_phone", "聯絡電話": "home_phone", "聯絡電話(日)": "home_phone", "電話日": "home_phone",
+            "電子郵件": "email", "電子信箱": "email", "email": "email", "Email": "email",
+            "學員聯絡地址縣市別": "address_city", "縣市別": "address_city",
+            "聯絡地址": "address_detail", "通訊地址": "address_detail", "地址": "address_detail", "地址(含郵遞區號)": "address_detail",
+            "服務單位": "company_name", "任職單位": "company_name", "任職單位名稱": "company_name", "公司": "company_name", "投保單位名稱": "company_name",
+            "職稱": "job_title", "職位": "job_title",
+            "學歷": "education_level", "最高學歷": "education_level", "教育程度": "education_level",
+            "科系": "education_major", "主修": "education_major",
+            "訓前任職狀況": "employment_status", "參訓身分別": "employment_status", "就業狀態": "employment_status", "任職狀況": "employment_status",
+            "簽名時間": "created_at", "付款日期": "created_at", "加入日期": "created_at", "報名日期": "created_at",
+            "會員流水編號": "web_member_id", "會員編號": "web_member_id", "會員ID": "web_member_id",
+            "備註": "memo1", "金流帳號": "memo1",
+            "錄取結果": "memo2", "團報資料": "memo2"
+        };
+
+        // Schema & Mapping Info for Documentation
+        const SCHEMA_INFO = [
+            { code: "M01", field: "member_id", desc: "系統主鍵", note: "固定填入 'etl' (暫用佔位符)" },
+            { code: "M02", field: "id_number", desc: "身分證字號", note: "F06, F07 缺此欄位" },
+            { code: "M03", field: "id_number_masked", desc: "遮罩身分證", note: "自動生成" },
+            { code: "M04", field: "name", desc: "姓名", note: "" },
+            { code: "M05", field: "gender", desc: "性別", note: "" },
+            { code: "M06", field: "birthday", desc: "出生日期", note: "F07 缺此欄位 (自動轉西元YYYY-MM-DD)" },
+            { code: "M07", field: "ethnicity", desc: "種族/原住民", note: "目前預設為空白或一般" },
+            { code: "M08", field: "mobile_phone", desc: "行動電話", note: "F07 電話欄位視為手機" },
+            { code: "M09", field: "home_phone", desc: "市內電話", note: "" },
+            { code: "M10", field: "email", desc: "電子郵件", note: "" },
+            { code: "M11", field: "address_city", desc: "縣市", note: "F01/F02 有獨立欄位，其餘需解析" },
+            { code: "M12", field: "address_district", desc: "行政區", note: "需由地址解析" },
+            { code: "M13", field: "address_detail", desc: "完整地址", note: "" },
+            { code: "M14", field: "occupation", desc: "職業", note: "多數來源無此欄位" },
+            { code: "M15", field: "company_name", desc: "服務單位/公司", note: "F03/F05/F06/F07 有資料" },
+            { code: "M16", field: "job_title", desc: "職稱", note: "" },
+            { code: "M17", field: "education_level", desc: "學歷", note: "" },
+            { code: "M18", field: "education_major", desc: "科系", note: "" },
+            { code: "M19", field: "employment_status", desc: "就業狀態", note: "Phase 1 暫保留，不強制對應" },
+            { code: "M20", field: "assigned_to", desc: "負責人", note: "" },
+            { code: "M21", field: "created_at", desc: "建立時間", note: "來源：報名/加入/付款日期 (自動轉西元YYYY-MM-DD)" },
+            { code: "M22", field: "updated_at", desc: "更新時間", note: "系統自動維護" },
+            { code: "M23", field: "data_source", desc: "資料來源", note: "自動寫入 (如 F01)" },
+            { code: "M24", field: "web_member_id", desc: "官網會員ID", note: "僅 F04 有值，追溯用" },
+            { code: "M25", field: "memo1", desc: "備註1", note: "F05/F06備註、F07金流帳號" },
+            { code: "M26", field: "memo2", desc: "備註2", note: "F05錄取結果、F07團報資料" },
+            { code: "M27", field: "etl_id_ref", desc: "ETL追溯碼", note: "自動生成 (YYYYMMDD_HHMMSS_mmm)" },
+            { code: "M28", field: "updated_by", desc: "更新者", note: "手動輸入，不可為空" },
+        ];
+
+        // Detailed Mapping for UI display
+        const MAPPING_DETAILS = {
+            F01: { M02: "身分證", M04: "姓名", M05: "性別", M06: "生日", M08: "手機", M09: "市話", M10: "電子郵件", M11: "縣市別", M13: "聯絡地址", M21: "簽名時間" },
+            F02: { M02: "身分證", M04: "姓名", M05: "性別", M06: "生日", M08: "手機", M09: "市話", M10: "電子郵件", M11: "縣市別", M13: "聯絡地址", M21: "簽名時間" },
+            F03: { M02: "身分證字號", M04: "姓名", M05: "性別", M06: "出生年月日", M08: "行動電話", M09: "連絡電話", M10: "電子郵件", M13: "通訊地址", M15: "服務單位", M16: "職稱", M17: "最高學歷", M18: "科系", M21: "付款日期" },
+            F04: { M02: "身分證字號", M04: "會員名稱", M05: "性別", M06: "生日", M08: "行動電話", M09: "連絡電話(日)", M10: "email", M13: "地址", M15: "服務單位", M16: "職稱", M17: "學歷", M21: "加入日期", M24: "會員流水編號" },
+            F05: { M02: "身分證明文件字號", M04: "姓名", M05: "性別", M06: "生日", M08: "行動電話", M09: "聯絡電話(日)", M10: "電子信箱", M13: "通訊地址", M15: "任職單位名稱", M17: "最高學歷", M18: "科系", M19: "訓前任職狀況", M21: "報名日期", M25: "備註", M26: "錄取結果" },
+            F06: { M02: "❌ 無", M04: "姓名", M06: "出生日期", M08: "行動電話", M09: "電話日", M10: "Email", M13: "通訊地址", M15: "服務單位", M17: "學歷", M18: "科系", M19: "參訓身分別", M21: "報名日期", M25: "備註" },
+            F07: { M04: "姓名", M08: "電話", M10: "email", M13: "地址", M15: "服務單位", M16: "職稱", M21: "付款日期", M25: "金流帳號", M26: "團報資料" }
+        };
+        
+        // --- Helper Functions ---
+        const normalizeHeader = (header) => header ? header.toString().replace(/[\s\r\n]/g, "").trim() : "";
+        const normalizeDateToISO = (input) => {
+            if (input === null || input === undefined) return "";
+            if (typeof input === 'number') {
+                 const date = new Date(Math.round((input - 25569) * 86400 * 1000));
+                 const y = date.getFullYear();
+                 const m = String(date.getMonth() + 1).padStart(2, '0');
+                 const d = String(date.getDate()).padStart(2, '0');
+                 return `${y}-${m}-${d}`;
+            }
+            let s = String(input).trim();
+            if (!s) return "";
+            s = s.replace(/年|\/|\-|\.|\s+/g, "/").replace(/月/g, "/").replace(/日/g, "").replace(/\/+/g, "/").replace(/^\/|\/$/g, "");
+            const parts = s.split("/");
+            if (parts.length < 3) return ""; 
+            let y = parts[0].replace(/\D/g, "");
+            let m = parts[1].replace(/\D/g, "");
+            let d = parts[2].replace(/\D/g, "");
+            if (!y || !m || !d) return "";
+            let year = parseInt(y, 10);
+            let month = parseInt(m, 10);
+            let day = parseInt(d, 10);
+            if (!(month >= 1 && month <= 12) || !(day >= 1 && day <= 31)) return "";
+            if (y.length <= 3) year = year + 1911;
+            else if (y.length === 4) {} 
+            else return ""; 
+            const mm = String(month).padStart(2, "0");
+            const dd = String(day).padStart(2, "0");
+            return `${year}-${mm}-${dd}`;
+        };
+        const maskIdNumber = (id) => {
+            if (!id || id.length < 4) return "";
+            if (id.length === 10) return id.substring(0, 2) + "*****" + id.substring(7);
+            return id;
+        };
+        const findHeaderRowIndex = (data, sourceType) => {
+            const keywords = ["姓名", "身分證", "手機", "出生日期", "email", "服務單位"];
+            for (let i = 0; i < Math.min(data.length, 10); i++) {
+                const row = data[i];
+                if (!row) continue;
+                let matchCount = 0;
+                row.forEach(cell => {
+                    if (cell && typeof cell === 'string') {
+                        const cellText = normalizeHeader(cell);
+                        if (keywords.some(k => cellText.includes(k))) matchCount++;
+                    }
+                });
+                if (matchCount >= 2) return i;
+            }
+            if (sourceType === 'F01' || sourceType === 'F02') return 1;
+            return 0;
+        };
+        const generateEtlId = () => {
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            const hh = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            const ss = String(now.getSeconds()).padStart(2, '0');
+            const mmm = String(now.getMilliseconds()).padStart(3, '0');
+            return `${yyyy}${mm}${dd}_${hh}${min}${ss}_${mmm}`;
+        };
+        const getCurrentDateISO = () => new Date().toISOString().slice(0,10);
+        const getCurrentDateTime = () => {
+            const now = new Date();
+            return now.getFullYear() + "/" + 
+                   String(now.getMonth()+1).padStart(2,0) + "/" + 
+                   String(now.getDate()).padStart(2,0) + " " + 
+                   String(now.getHours()).padStart(2,0) + ":" + 
+                   String(now.getMinutes()).padStart(2,0) + ":" + 
+                   String(now.getSeconds()).padStart(2,0);
+        };
+        const generateMemberId = () => {
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            const hh = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            // Format: key-YYYYMMDD-HHMM
+            return `key-${yyyy}${mm}${dd}-${hh}${min}`;
+        }
+
+        // --- Shared Components ---
+        const Header = () => (
+            <header className="bg-white border-b border-gray-200 sticky top-0 z-50 no-print">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex justify-between items-center h-16">
+                        <div className="flex items-center">
+                            <div className="flex-shrink-0 flex items-center text-blue-600">
+                                <RefreshCw className="h-8 w-8 mr-2" />
+                                <span className="font-bold text-xl tracking-tight text-gray-800">Hongda Trans Converter</span>
+                                <span className="ml-2 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">Step1 Only</span>
+                            </div>
+                        </div>
+                        <div className="text-sm text-gray-500 hidden sm:block">
+                            © Force Cheng（原力狐） 2026/01/01
+                        </div>
+                    </div>
+                </div>
+            </header>
+        );
+
+        const Section = ({ title, children, icon: Icon, disabled = false }) => (
+            <div className={`bg-white rounded-lg border border-gray-200 mb-6 overflow-hidden ${disabled ? 'opacity-60 grayscale' : 'google-shadow'}`}>
+                <div className="px-6 py-4 border-b border-gray-100 flex items-center bg-gray-50">
+                    {Icon && <Icon className={`h-5 w-5 mr-2 ${disabled ? 'text-gray-400' : 'text-blue-600'}`} />}
+                    <h3 className={`text-lg font-medium ${disabled ? 'text-gray-500' : 'text-gray-900'}`}>{title}</h3>
+                    {disabled && <span className="ml-auto text-xs font-bold text-gray-400 border border-gray-300 px-2 py-0.5 rounded">即將推出</span>}
+                </div>
+                <div className="p-6">
+                    {children}
+                </div>
+            </div>
+        );
+
+        // --- Sub-Component: Manual Entry Form (Tab 1) ---
+        const ManualEntry = () => {
+            const [formData, setFormData] = useState({});
+            const [showConfirm, setShowConfirm] = useState(false);
+            const [finalData, setFinalData] = useState(null);
+            const [printTime, setPrintTime] = useState("");
+
+            const handleInputChange = (e) => {
+                const { name, value } = e.target;
+                setFormData(prev => ({ ...prev, [name]: value }));
+            };
+
+            const handleGenerateSample = () => {
+                const random3 = String(Math.floor(Math.random() * 900) + 100).padStart(3, '0');
+                const sampleData = {
+                    name: `姓名-${random3}`,
+                    id_number: `A123456${random3}`,
+                    gender: "男",
+                    birthday: "1990-01-01",
+                    ethnicity: "一般",
+                    mobile_phone: `0912-345-${random3}`,
+                    home_phone: "02-12345678",
+                    email: `user${random3}@example.com`,
+                    address_city: "臺北市",
+                    address_district: "中正區",
+                    address_detail: `測試路${random3}號`,
+                    occupation: "工程師",
+                    company_name: `測試公司-${random3}`,
+                    job_title: "專員",
+                    education_level: "大學",
+                    education_major: "資管",
+                    employment_status: "在職",
+                    assigned_to: "Sales A",
+                    created_at: getCurrentDateISO(),
+                    memo1: "測試備註1",
+                    memo2: "測試備註2",
+                    updated_by: `測試員-${random3}`
+                };
+                setFormData(sampleData);
+            };
+
+            const handleSubmit = () => {
+                if (!formData.updated_by) {
+                    alert("請輸入更新者 (Updated By)");
+                    return;
+                }
+                
+                const nowISO = getCurrentDateISO();
+                const etlId = generateEtlId();
+                const memberId = generateMemberId(); // key-YYYYMMDD-HHMM
+                
+                const calculated = {
+                    ...formData,
+                    member_id: memberId,
+                    id_number_masked: maskIdNumber(formData.id_number),
+                    etl_id_ref: etlId,
+                    data_source: "ManualInput",
+                    created_at: formData.created_at || nowISO, 
+                    updated_at: nowISO,
+                    ...TARGET_HEADERS.reduce((acc, key) => {
+                        if (SYSTEM_FIELDS.includes(key)) return acc; 
+                        if (!formData[key]) acc[key] = "";
+                        return acc;
+                    }, {})
+                };
+                
+                setFinalData(calculated);
+                setPrintTime(getCurrentDateTime());
+                setShowConfirm(true);
+            };
+
+            const handleSave = () => {
+                const ws = XLSX.utils.json_to_sheet([finalData], { header: TARGET_HEADERS, skipHeader: false });
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Members_DB");
+                const fileName = `Manual_Entry_${finalData.name || 'Record'}_${new Date().toISOString().slice(0,10)}.xlsx`;
+                XLSX.writeFile(wb, fileName);
+            };
+
+            const handlePrint = () => {
+                window.print();
+            };
+
+            const handleClose = () => {
+                setShowConfirm(false);
+                setFinalData(null);
+            };
+
+            const inputGroups = [
+                { title: "基本資料", fields: ["name", "id_number", "gender", "birthday", "ethnicity"] },
+                { title: "聯絡方式", fields: ["mobile_phone", "home_phone", "email"] },
+                { title: "地址資訊", fields: ["address_city", "address_district", "address_detail"] },
+                { title: "職業與學歷", fields: ["occupation", "company_name", "job_title", "education_level", "education_major", "employment_status"] },
+                { title: "其他", fields: ["web_member_id", "assigned_to", "created_at", "memo1", "memo2"] },
+            ];
+
+            return (
+                <div className="w-full">
+                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 no-print">
+                        <div className="flex items-center justify-between mb-6 text-gray-800 border-b pb-4">
+                            <div className="flex items-center">
+                                <Keyboard className="w-6 h-6 mr-2 text-blue-600"/>
+                                <h2 className="text-xl font-bold">人工資料輸入</h2>
+                            </div>
+                            <button 
+                                onClick={handleGenerateSample}
+                                className="flex items-center px-3 py-1.5 text-sm bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors"
+                            >
+                                <span className="mr-1">🪄</span> 填入範例資料
+                            </button>
+                        </div>
+
+                        <div className="space-y-8">
+                            <div className="bg-blue-50 p-4 rounded-md border border-blue-200">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">更新者 (Updated By) <span className="text-red-500">*</span></label>
+                                <input 
+                                    type="text" 
+                                    name="updated_by" 
+                                    value={formData.updated_by || ""} 
+                                    onChange={handleInputChange}
+                                    className="w-full md:w-1/3 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                                    placeholder="請輸入您的姓名"
+                                />
+                            </div>
+
+                            {inputGroups.map((group, idx) => (
+                                <div key={idx}>
+                                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 border-l-4 border-blue-500 pl-2">
+                                        {group.title}
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {group.fields.map(field => (
+                                            <div key={field}>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    {DB_FIELD_TRANSLATIONS[field] || field} <span className="text-gray-400 text-xs">({field})</span>
+                                                    {field === 'created_at' && <span className="text-xs text-gray-400 ml-1">(YYYY-MM-DD)</span>}
+                                                </label>
+                                                <input 
+                                                    type="text" 
+                                                    name={field}
+                                                    value={formData[field] || ""}
+                                                    onChange={handleInputChange}
+                                                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none transition-shadow text-sm"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="mt-8 flex justify-end">
+                            <button 
+                                onClick={handleSubmit}
+                                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 shadow-md transition-all hover:shadow-lg"
+                            >
+                                <CheckCircle2 className="w-5 h-5 mr-2" />
+                                完成並預覽
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Confirmation Modal */}
+                    {showConfirm && finalData && (
+                        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4 print:p-0 print:bg-white print:static">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto print:shadow-none print:w-full print:h-auto print:max-w-none print:overflow-visible print-area">
+                                
+                                {/* Modal Header (No Print) */}
+                                <div className="flex justify-between items-center p-4 border-b no-print bg-gray-50">
+                                    <h3 className="text-lg font-bold text-gray-800">資料確認與輸出</h3>
+                                    <button onClick={handleClose} className="text-gray-500 hover:text-gray-700">
+                                        <X className="w-6 h-6" />
+                                    </button>
+                                </div>
+
+                                {/* Print Header */}
+                                <div className="hidden print:block mb-4 border-b pb-2">
+                                    <h1 className="text-2xl font-bold text-center">會員資料確認單 (Manual Input)</h1>
+                                    <div className="flex justify-between text-sm text-gray-600 mt-2">
+                                        <span>操作者：{finalData.updated_by}</span>
+                                        <span>列印時間：{printTime}</span>
+                                    </div>
+                                </div>
+
+                                {/* Content Grid */}
+                                <div className="p-6 grid grid-cols-2 gap-4 text-sm print:text-xs print:gap-2">
+                                    {TARGET_HEADERS.map(key => {
+                                        const isSystem = SYSTEM_FIELDS.includes(key);
+                                        const bgColor = isSystem ? "bg-yellow-50 print:bg-gray-100" : "bg-white";
+                                        return (
+                                            <div key={key} className={`border p-2 rounded flex flex-col ${bgColor} break-inside-avoid`}>
+                                                <span className="text-xs text-gray-500 font-semibold mb-1 uppercase">{DB_FIELD_TRANSLATIONS[key] || key}</span>
+                                                <span className="font-medium text-gray-900 break-words">{finalData[key] || "-"}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Print Footer */}
+                                <div className="hidden print:block mt-8 text-center text-xs text-gray-400 border-t pt-2">
+                                    <p>Hongda Trans Converter - Internal Use Only</p>
+                                    <p>輸入時間: {finalData.created_at || 'N/A'}</p>
+                                </div>
+
+                                {/* Action Buttons (No Print) */}
+                                <div className="p-4 border-t bg-gray-50 flex justify-end gap-3 no-print sticky bottom-0">
+                                    <button 
+                                        onClick={handleSave}
+                                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                                    >
+                                        <Save className="w-4 h-4 mr-2" />
+                                        存檔 (xlsx)
+                                    </button>
+                                    <button 
+                                        onClick={handlePrint}
+                                        className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                                    >
+                                        <Printer className="w-4 h-4 mr-2" />
+                                        列印
+                                    </button>
+                                    <button 
+                                        onClick={handleClose}
+                                        className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                                    >
+                                        關閉
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // --- Sub-Component: Source File Documentation (Modal) ---
+        const SourceFileDocsModal = ({ isOpen, onClose }) => {
+            const [selectedDocSource, setSelectedDocSource] = useState(null);
+
+            if (!isOpen) return null;
+
+            return (
+                <div className="fixed inset-0 z-50 bg-black bg-opacity-70 flex items-center justify-center p-0 md:p-4 animate-fade-in">
+                    <div className="bg-white w-full h-full md:h-auto md:max-h-[90vh] md:rounded-lg shadow-2xl flex flex-col overflow-hidden relative">
+                        
+                        {/* Modal Header */}
+                        <div className="flex justify-between items-center p-4 border-b bg-gray-50 flex-shrink-0">
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-800">
+                                    來源欄位對照說明 (Schema)
+                                </h3>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    請選擇左側 (或上方) 來源以查看對照表
+                                </p>
+                            </div>
+                            <button 
+                                onClick={onClose} 
+                                className="p-2 bg-gray-200 hover:bg-gray-300 rounded-full transition-colors"
+                            >
+                                <X className="w-6 h-6 text-gray-700" />
+                            </button>
+                        </div>
+
+                        <div className="flex flex-col md:flex-row flex-grow overflow-hidden">
+                            {/* Sidebar / Top Menu for Source Selection */}
+                            <div className="w-full md:w-64 bg-gray-50 border-r border-gray-200 p-4 overflow-y-auto flex-shrink-0">
+                                <div className="space-y-2">
+                                    {SOURCE_TYPES.map(src => (
+                                        <button 
+                                            key={src.id} 
+                                            onClick={() => setSelectedDocSource(src.id)}
+                                            className={`w-full text-left px-4 py-3 rounded-md transition-colors flex flex-col ${selectedDocSource === src.id ? 'bg-blue-100 border-blue-300 border shadow-sm' : 'bg-white border border-gray-200 hover:bg-gray-100'}`}
+                                        >
+                                            <span className="text-xs font-bold text-blue-600">{src.id}</span>
+                                            <span className="text-sm font-medium text-gray-800 truncate">{src.name}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Content Area */}
+                            <div className="flex-grow overflow-y-auto p-0 bg-white">
+                                {selectedDocSource ? (
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full divide-y divide-gray-200">
+                                            <thead className="bg-gray-100 sticky top-0 z-10 shadow-sm">
+                                                <tr>
+                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">代碼</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">系統欄位</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">中文名稱</th>
+                                                    <th className="px-4 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">
+                                                        {selectedDocSource} 對應來源表頭
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="bg-white divide-y divide-gray-200">
+                                                {SCHEMA_INFO.map((item, idx) => {
+                                                    const sourceHeader = MAPPING_DETAILS[selectedDocSource]?.[item.code];
+                                                    const hasMapping = !!sourceHeader;
+                                                    return (
+                                                        <tr key={idx} className={`hover:bg-gray-50 ${hasMapping ? 'bg-blue-50/30' : ''}`}>
+                                                            <td className="px-4 py-3 whitespace-nowrap text-xs font-medium text-gray-500">{item.code}</td>
+                                                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700 font-mono">{item.field}</td>
+                                                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{DB_FIELD_TRANSLATIONS[item.field]}</td>
+                                                            <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                                                                {hasMapping ? (
+                                                                    <span className="text-blue-700 bg-blue-100 px-2 py-0.5 rounded border border-blue-200">{sourceHeader}</span>
+                                                                ) : <span className="text-gray-400 text-xs">❌ 無</span>}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full text-gray-400 p-8">
+                                        <List className="w-16 h-16 mb-4 opacity-20" />
+                                        <p>請選擇左側來源檔案以查看欄位對照表</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Modal Footer (Close Button for Mobile) */}
+                        <div className="p-4 border-t bg-gray-50 flex-shrink-0 md:hidden">
+                            <button onClick={onClose} className="w-full py-3 bg-gray-800 text-white rounded-lg font-medium text-lg active:bg-gray-900">
+                                關閉視窗
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [activeTab, setActiveTab] = useState("manual"); // 'manual' or 'batch'
+            const [isDocsOpen, setIsDocsOpen] = useState(false);
+            
+            // --- Batch Converter State ---
+            const [view, setView] = useState("converter"); 
+            const [file, setFile] = useState(null);
+            const [fileInfo, setFileInfo] = useState(null);
+            const [workbook, setWorkbook] = useState(null);
+            const [selectedSheet, setSelectedSheet] = useState("");
+            const [sheets, setSheets] = useState([]);
+            const [sourceType, setSourceType] = useState("");
+            const [updatedBy, setUpdatedBy] = useState("");
+            const [convertedData, setConvertedData] = useState([]);
+            const [isConverting, setIsConverting] = useState(false);
+            const [errorMsg, setErrorMsg] = useState("");
+            const [currentPage, setCurrentPage] = useState(1);
+            const rowsPerPage = 50;
+            const fileInputRef = useRef(null);
+
+            // ... (Keep existing batch logic functions: handleFileChange, processData, downloadExcel, pagination...)
+            // To save space, I will reuse the logic structure but ensure it's conditioned on activeTab
+            
+            const indexOfLastRow = currentPage * rowsPerPage;
+            const indexOfFirstRow = indexOfLastRow - rowsPerPage;
+            const currentRows = convertedData.slice(indexOfFirstRow, indexOfLastRow);
+            const totalPages = Math.ceil(convertedData.length / rowsPerPage);
+
+            const handlePageChange = (pageNumber) => setCurrentPage(pageNumber);
+
+            const handleFileChange = (e) => {
+                const uploadedFile = e.target.files[0];
+                if (!uploadedFile) return;
+                setFile(uploadedFile);
+                setErrorMsg("");
+                setConvertedData([]);
+                setWorkbook(null);
+                setCurrentPage(1);
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const wb = XLSX.read(data, { type: 'array' });
+                        setWorkbook(wb);
+                        setSheets(wb.SheetNames);
+                        if (wb.SheetNames.length > 0) setSelectedSheet(wb.SheetNames[0]);
+                        setFileInfo({ name: uploadedFile.name, size: (uploadedFile.size / 1024).toFixed(2) + " KB", sheets: wb.SheetNames.length });
+                    } catch (err) { setErrorMsg("檔案解析失敗"); }
+                };
+                reader.readAsArrayBuffer(uploadedFile);
+            };
+
+            const processData = () => {
+                if (!workbook || !selectedSheet || !sourceType) { setErrorMsg("請先上傳檔案並選擇來源"); return; }
+                if (!updatedBy.trim()) { setErrorMsg("請輸入更新者姓名"); return; }
+                setIsConverting(true);
+                setErrorMsg("");
+                setCurrentPage(1);
+                setTimeout(() => {
+                    try {
+                        const ws = workbook.Sheets[selectedSheet];
+                        const rawData = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+                        if (rawData.length < 2) throw new Error("資料不足");
+                        const headerRowIndex = findHeaderRowIndex(rawData, sourceType);
+                        const sourceHeaders = rawData[headerRowIndex];
+                        const sourceRows = rawData.slice(headerRowIndex + 1);
+                        const currentEtlId = generateEtlId();
+                        // Batch Date Prefix
+                        const now = new Date();
+                        const yyyy = now.getFullYear();
+                        const mm = String(now.getMonth() + 1).padStart(2, '0');
+                        const dd = String(now.getDate()).padStart(2, '0');
+                        const memberIdPrefix = `etl-${yyyy}${mm}${dd}-`;
+
+                        const result = sourceRows.map((row, index) => {
+                            if (row.every(cell => !cell)) return null;
+                            const mappedRow = {};
+                            TARGET_HEADERS.forEach(h => mappedRow[h] = "");
+                            
+                            const seq = String(index + 1).padStart(5, '0');
+                            mappedRow["member_id"] = `${memberIdPrefix}${seq}`;
+                            mappedRow["etl_id_ref"] = currentEtlId;
+                            mappedRow["updated_by"] = updatedBy;
+
+                            sourceHeaders.forEach((header, index) => {
+                                const normHeader = normalizeHeader(header);
+                                const targetField = MAPPING_DICT[normHeader];
+                                if (targetField) {
+                                    let value = row[index];
+                                    if (targetField === 'birthday' || targetField === 'created_at') value = normalizeDateToISO(value);
+                                    if (targetField === 'mobile_phone') value = String(value).replace(/[\-\s]/g, '');
+                                    if (targetField === 'id_number' && value) value = String(value).trim().toUpperCase();
+                                    if (targetField === 'web_member_id' && sourceType !== 'F04') value = "";
+                                    if (value !== undefined && value !== null && value !== "") mappedRow[targetField] = value;
+                                }
+                            });
+                            if (mappedRow["id_number"] && !mappedRow["id_number_masked"]) mappedRow["id_number_masked"] = maskIdNumber(mappedRow["id_number"]);
+                            if (!mappedRow["ethnicity"]) mappedRow["ethnicity"] = "一般";
+                            mappedRow["data_source"] = sourceType; 
+                            return mappedRow;
+                        }).filter(row => row !== null);
+                        setConvertedData(result);
+                    } catch (err) { setErrorMsg("轉換錯誤: " + err.message); } finally { setIsConverting(false); }
+                }, 500);
+            };
+
+            const downloadExcel = () => {
+                if (convertedData.length === 0) return;
+                const ws = XLSX.utils.json_to_sheet(convertedData, { header: TARGET_HEADERS, skipHeader: false });
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Members_DB");
+                XLSX.writeFile(wb, `Trans_db_${sourceType}_${new Date().toISOString().slice(0,10)}.xlsx`);
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col">
+                    <Header />
+
+                    <div className="bg-white shadow-sm border-b sticky top-16 z-40 no-print">
+                        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div className="flex space-x-8 -mb-px">
+                                <button 
+                                    className={`py-4 px-1 font-medium text-sm transition-colors duration-200 ${activeTab === 'manual' ? 'tab-active' : 'tab-inactive'}`}
+                                    onClick={() => setActiveTab('manual')}
+                                >
+                                    人工單筆輸入
+                                </button>
+                                <button 
+                                    className={`py-4 px-1 font-medium text-sm transition-colors duration-200 ${activeTab === 'batch' ? 'tab-active' : 'tab-inactive'}`}
+                                    onClick={() => setActiveTab('batch')}
+                                >
+                                    批次檔案轉換
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <main className="flex-grow max-w-5xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+                        
+                        {activeTab === 'manual' && (
+                            <ManualEntry />
+                        )}
+
+                        {activeTab === 'batch' && (
+                            <div className="animate-fade-in no-print">
+                                 {/* Batch Converter UI (Reused from previous version) */}
+                                <Section title="1. 上傳來源檔案" icon={Upload}>
+                                    <div className="flex flex-col sm:flex-row items-center gap-4">
+                                        <label className="block flex-1 w-full">
+                                            <input type="file" ref={fileInputRef} accept=".xlsx, .xls" onChange={handleFileChange} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" />
+                                        </label>
+                                    </div>
+                                    {fileInfo && (
+                                        <div className="mt-4 p-4 bg-green-50 rounded-md border border-green-200 text-sm text-green-800">
+                                            檔案：{fileInfo.name} ({fileInfo.size}), {fileInfo.sheets} sheets
+                                            <select value={selectedSheet} onChange={(e) => setSelectedSheet(e.target.value)} className="ml-2 form-select border-gray-300 rounded-md text-sm">{sheets.map(s => <option key={s} value={s}>{s}</option>)}</select>
+                                        </div>
+                                    )}
+                                </Section>
+
+                                <Section title="2. 選擇來源類型" icon={FileSpreadsheet}>
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                                        <select value={sourceType} onChange={(e) => setSourceType(e.target.value)} className="flex-1 mt-1 block w-full pl-3 pr-10 py-2.5 border-gray-300 rounded-md shadow-sm border">
+                                            <option value="" disabled>-- 請選擇來源 --</option>
+                                            {SOURCE_TYPES.map(type => <option key={type.id} value={type.id}>{type.name}</option>)}
+                                        </select>
+                                        <button 
+                                            onClick={() => setIsDocsOpen(true)}
+                                            className="mt-1 inline-flex items-center px-4 py-2 border border-blue-300 shadow-sm text-sm font-medium rounded-md text-blue-700 bg-white hover:bg-blue-50 focus:outline-none"
+                                        >
+                                            <List className="h-4 w-4 mr-2" />
+                                            查看來源欄位對照說明 (Schema)
+                                        </button>
+                                    </div>
+                                </Section>
+
+                                <Section title="3. 資料更新者 (必填)" icon={User}>
+                                    <input type="text" value={updatedBy} onChange={(e) => setUpdatedBy(e.target.value)} placeholder="請輸入您的姓名" className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+                                </Section>
+
+                                <Section title="4. 執行轉換與下載" icon={Download}>
+                                    {errorMsg && <div className="mb-4 p-4 bg-red-50 text-red-700">{errorMsg}</div>}
+                                    <div className="flex gap-4 mb-6">
+                                        <button onClick={processData} disabled={isConverting || !file || !sourceType || !updatedBy} className={`flex-1 px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-gray-300 ${isConverting?'opacity-75':''}`}>{isConverting ? '處理中...' : '開始轉換'}</button>
+                                        <button onClick={downloadExcel} disabled={convertedData.length === 0} className="flex-1 px-4 py-2 text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 disabled:bg-gray-100 disabled:text-gray-400">下載 Trans_db.xlsx</button>
+                                    </div>
+                                    {convertedData.length > 0 && (
+                                        <div>
+                                            <div className="flex justify-between mb-2"><h4 className="font-bold">結果：{convertedData.length} 筆</h4>
+                                            <div className="space-x-2"><button onClick={()=>handlePageChange(currentPage-1)} disabled={currentPage===1} className="px-2 py-1 border rounded disabled:opacity-50">&lt;</button><span>{currentPage}/{totalPages}</span><button onClick={()=>handlePageChange(currentPage+1)} disabled={currentPage===totalPages} className="px-2 py-1 border rounded disabled:opacity-50">&gt;</button></div></div>
+                                            <div className="overflow-x-auto border rounded table-container">
+                                                <table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr>{TARGET_HEADERS.map(h=><th key={h} className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">{h}</th>)}</tr></thead>
+                                                <tbody className="bg-white divide-y divide-gray-200">{currentRows.map((r,i)=><tr key={i}>{TARGET_HEADERS.map(h=><td key={h} className="px-3 py-2 text-sm text-gray-500 whitespace-nowrap">{r[h]}</td>)}</tr>)}</tbody></table>
+                                            </div>
+                                        </div>
+                                    )}
+                                </Section>
+                            </div>
+                        )}
+
+                    </main>
+
+                    {/* Integrated Source Docs Modal */}
+                    <SourceFileDocsModal isOpen={isDocsOpen} onClose={() => setIsDocsOpen(false)} />
+
+                    <footer className="bg-gray-800 text-white py-6 mt-auto no-print">
+                        <div className="max-w-7xl mx-auto px-4 text-center">
+                            <p className="text-sm text-gray-400 mb-1">Last Update: {LAST_UPDATE}</p>
+                            <p className="text-sm font-medium">
+                                Designed by <a href="https://www.linkedin.com/in/force-cheng-taiwan" target="_blank" rel="noopener noreferrer" className="text-blue-300 hover:text-blue-100 underline decoration-blue-300/50 hover:decoration-blue-100">Force Fox 原力狐</a>
+                            </p>
+                        </div>
+                    </footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
