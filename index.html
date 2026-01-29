@@ -1,0 +1,1692 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>宏大 CRM 系統 (Phase 1)</title>
+    <!-- SheetJS for Excel processing -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #1a73e8; /* Google Blue */
+            --primary-hover: #1557b0;
+            --bg-color: #f8f9fa;
+            --surface-color: #ffffff;
+            --text-color: #202124;
+            --border-color: #dadce0;
+            --danger-color: #d93025;
+            --success-color: #188038;
+            --warning-bg: #fef7e0;
+            --warning-text: #806000;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-size: 14px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            width: 100%;
+            flex: 1; /* Push footer to bottom */
+        }
+
+        header {
+            background-color: var(--surface-color);
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 2px rgba(60,64,67,0.3);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 20px;
+            color: var(--primary-color);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #9aa0a6;
+            font-size: 12px;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--surface-color);
+            margin-top: auto;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--surface-color);
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #5f6368;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-btn.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 2px rgba(60,64,67,0.1);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #3c4043;
+        }
+
+        .sub-section {
+            border-top: 1px solid #eee;
+            margin-top: 20px;
+            padding-top: 20px;
+        }
+        
+        .sub-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #5f6368;
+            margin-bottom: 10px;
+        }
+
+        /* Forms & Inputs */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #5f6368;
+        }
+
+        input[type="text"], input[type="number"], select, input[type="file"], input[type="url"], input[type="date"] {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 1px var(--primary-color);
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 9px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: #3c4043;
+        }
+        
+        .btn-outline:hover {
+            background-color: #f1f3f4;
+        }
+
+        .btn-google {
+            background-color: #188038;
+            color: white;
+            border: none;
+            padding: 9px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-google:hover { background-color: #137333; }
+
+        .btn-link-card {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--text-color);
+            margin-bottom: 10px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-link-card:hover {
+            background-color: #f8f9fa;
+            border-color: var(--primary-color);
+        }
+
+        .btn-link-card .icon {
+            font-size: 24px;
+            margin-right: 15px;
+        }
+
+        .btn-link-card .info strong {
+            display: block;
+            font-size: 15px;
+            color: var(--primary-color);
+            margin-bottom: 4px;
+        }
+
+        .btn-link-card .info span {
+            font-size: 12px;
+            color: #5f6368;
+        }
+
+        /* Search Bar Layout */
+        .search-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            align-items: end;
+        }
+
+        /* Report Bar Layout */
+        .report-section {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .report-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: start;
+        }
+
+        .report-group {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: 1px solid #eee;
+            margin-bottom: 10px;
+        }
+
+        .report-group label {
+            font-size: 12px;
+            margin-bottom: 4px;
+            color: #5f6368;
+            font-weight: bold;
+        }
+
+        .report-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* Activity Report Specific */
+        .date-pills {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 5px;
+        }
+        .date-pill {
+            font-size: 12px;
+            padding: 2px 8px;
+            background: #e8eaed;
+            border-radius: 12px;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .date-pill:hover { background: #dadce0; }
+        .date-pill.active {
+            background: #e8f0fe;
+            color: var(--primary-color);
+            border-color: #d2e3fc;
+            font-weight: bold;
+        }
+
+        /* View Toggle */
+        .view-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #e8f0fe;
+            border-radius: 4px;
+            border: 1px solid #d2e3fc;
+        }
+
+        .view-controls label {
+            margin: 0;
+            font-weight: normal;
+            cursor: pointer;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Tables */
+        .table-container {
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            white-space: nowrap;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: #f8f9fa;
+            color: #5f6368;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            cursor: pointer;
+            user-select: none;
+            z-index: 10;
+        }
+
+        th:hover {
+            background-color: #e8eaed;
+        }
+
+        th.nosort { cursor: default; }
+        th.nosort:hover { background-color: #f8f9fa; }
+
+        th::after {
+            content: '↕';
+            font-size: 10px;
+            margin-left: 5px;
+            opacity: 0.3;
+        }
+        
+        th.nosort::after { content: ''; }
+        th.sort-asc::after { content: '▲'; opacity: 1; color: var(--primary-color); }
+        th.sort-desc::after { content: '▼'; opacity: 1; color: var(--primary-color); }
+
+        tr:hover {
+            background-color: #f1f3f4;
+            cursor: pointer;
+        }
+        
+        /* Checkbox Column */
+        td.check-col, th.check-col {
+            width: 40px;
+            text-align: center;
+            padding: 0 10px;
+        }
+
+        /* Copyable Cell & Detail Item */
+        td.copyable, .detail-item span.copyable-text {
+            cursor: pointer;
+            position: relative;
+            transition: background-color 0.2s;
+        }
+        td.copyable:hover, .detail-item span.copyable-text:hover {
+            background-color: #e8f0fe;
+            border-radius: 4px; /* for detail items */
+        }
+        td.copyable:active, .detail-item span.copyable-text:active {
+            background-color: #d2e3fc;
+        }
+
+        /* Status Messages */
+        .status-box {
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+            display: none;
+        }
+        .status-success { background-color: #e6f4ea; color: var(--success-color); border: 1px solid #ceead6; }
+        .status-error { background-color: #fce8e6; color: var(--danger-color); border: 1px solid #fad2cf; }
+        .status-warning { background-color: var(--warning-bg); color: var(--warning-text); border: 1px solid #f9eac0; }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            overflow: auto;
+        }
+
+        .modal-content {
+            background-color: var(--surface-color);
+            margin: 5% auto;
+            padding: 25px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 800px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .modal-close {
+            font-size: 24px;
+            cursor: pointer;
+            color: #5f6368;
+        }
+
+        .detail-section {
+            margin-bottom: 25px;
+        }
+        
+        .detail-section h3 {
+            font-size: 15px;
+            color: var(--primary-color);
+            border-bottom: 2px solid #e8f0fe;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .detail-item strong {
+            display: block;
+            color: #5f6368;
+            font-size: 12px;
+            margin-bottom: 2px;
+        }
+        
+        .detail-item span {
+            display: inline-block; /* ensure padding works for hover */
+            padding: 2px 4px;
+            margin: -2px -4px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #5f6368;
+        }
+        
+        /* Loading Overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 10px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Toast Notification */
+        #toast {
+            visibility: hidden;
+            min-width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 4px;
+            padding: 10px;
+            position: fixed;
+            z-index: 3000;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+        }
+
+    </style>
+</head>
+<body>
+
+<div id="loading" class="loading-overlay">
+    <div class="spinner"></div>
+    <div id="loading-text">處理中...</div>
+</div>
+
+<div id="toast">已複製到剪貼簿</div>
+
+<header>
+    <h1>宏大 CRM 系統 <span style="font-size: 0.8em; color: #5f6368; font-weight: normal;">(Phase 1)</span></h1>
+    <div id="system-status" style="font-size: 12px; color: #5f6368;">等待資料匯入...</div>
+</header>
+
+<div class="container">
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('import')">1. 資料匯入 (Import)</button>
+        <button class="tab-btn" onclick="switchTab('search')">2. 查詢與報表 (Search & Reports)</button>
+        <button class="tab-btn" onclick="switchTab('references')">3. 參考資料 (References)</button>
+    </div>
+
+    <!-- TAB 1: IMPORT -->
+    <div id="import" class="tab-content active">
+        <div class="card">
+            <div class="card-title">匯入資料庫</div>
+            
+            <div class="sub-section" style="margin-top:0; border-top:none; padding-top:0;">
+                <div class="sub-title">方式 A：本機 Excel 匯入</div>
+                <p style="color: #5f6368; margin-bottom: 10px; font-size:13px;">請選擇包含 <code>Members_DB</code>, <code>Courses_Records</code>, <code>Licenses</code>, <code>Interview_Logs</code> 的 Excel 檔案。</p>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <div class="form-group" style="flex-grow: 1; margin-bottom: 0;">
+                        <input type="file" id="fileInput" accept=".xlsx">
+                    </div>
+                    <button class="btn" onclick="handleFileImport()">本機匯入</button>
+                </div>
+            </div>
+
+            <div class="sub-section">
+                <div class="sub-title">方式 B：Google Sheet 雲端匯入 (實驗性)</div>
+                <p style="color: #5f6368; margin-bottom: 10px; font-size:13px;">輸入 Google Sheet 連結。注意：若瀏覽器安全性阻擋 (CORS)，系統將引導您下載後手動匯入。</p>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <div class="form-group" style="flex-grow: 1; margin-bottom: 0;">
+                        <input type="url" id="googleSheetUrl" placeholder="https://docs.google.com/spreadsheets/d/..." value="https://docs.google.com/spreadsheets/d/1Lsq7clSrZTREzX5kyKgtkg__o5jFnI_x/edit?usp=sharing&ouid=107764158310255520570&rtpof=true&sd=true">
+                    </div>
+                    <button class="btn btn-google" onclick="importFromGoogleSheet()">☁️ 雲端匯入</button>
+                </div>
+            </div>
+
+            <div id="import-status" class="status-box"></div>
+            
+            <div id="data-summary" style="margin-top: 20px; display: none;">
+                <h3>匯入摘要</h3>
+                <div class="detail-grid">
+                    <div class="detail-item"><strong>來源名稱</strong><span id="sum-filename">-</span></div>
+                    <div class="detail-item"><strong>匯入時間</strong><span id="sum-time">-</span></div>
+                    <div class="detail-item"><strong>會員資料 (Members)</strong><span id="sum-members">0</span> 筆</div>
+                    <div class="detail-item"><strong>課程紀錄 (Courses)</strong><span id="sum-courses">0</span> 筆</div>
+                    <div class="detail-item"><strong>證照資料 (Licenses)</strong><span id="sum-licenses">0</span> 筆</div>
+                    <div class="detail-item"><strong>訪談紀錄 (Interviews)</strong><span id="sum-interviews">0</span> 筆</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: SEARCH & REPORTS -->
+    <div id="search" class="tab-content">
+        <div class="card">
+            <div class="card-title">會員查詢</div>
+            <div class="search-bar">
+                <div class="form-group">
+                    <label>關鍵字搜尋</label>
+                    <input type="text" id="searchInput" placeholder="姓名 / 身分證 / 手機">
+                </div>
+                <div class="form-group">
+                    <label>生日月份 (篩選)</label>
+                    <select id="monthFilter">
+                        <option value="">全部</option>
+                        <option value="1">1月</option>
+                        <option value="2">2月</option>
+                        <option value="3">3月</option>
+                        <option value="4">4月</option>
+                        <option value="5">5月</option>
+                        <option value="6">6月</option>
+                        <option value="7">7月</option>
+                        <option value="8">8月</option>
+                        <option value="9">9月</option>
+                        <option value="10">10月</option>
+                        <option value="11">11月</option>
+                        <option value="12">12月</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>族群篩選</label>
+                    <select id="ethnicityFilter">
+                        <option value="">全部</option>
+                        <option value="一般">一般</option>
+                        <option value="原住民">原住民</option>
+                        <option value="新住民">新住民</option>
+                        <option value="身心障礙">身心障礙</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <button class="btn" onclick="executeSearch()">🔍 搜尋</button>
+                </div>
+            </div>
+
+            <!-- Report Section -->
+            <div class="report-section">
+                <div class="card-title" style="font-size: 14px; margin-bottom: 10px;">報表產生 (Reports)</div>
+                <div class="report-bar">
+                    <!-- Birthday Report Control -->
+                    <div class="report-group">
+                        <label>壽星月份選擇</label>
+                        <div class="report-controls">
+                            <select id="reportMonthSelect" style="width: 80px;">
+                                <option value="1">1月</option>
+                                <option value="2">2月</option>
+                                <option value="3">3月</option>
+                                <option value="4">4月</option>
+                                <option value="5">5月</option>
+                                <option value="6">6月</option>
+                                <option value="7">7月</option>
+                                <option value="8">8月</option>
+                                <option value="9">9月</option>
+                                <option value="10">10月</option>
+                                <option value="11">11月</option>
+                                <option value="12">12月</option>
+                            </select>
+                            <button class="btn btn-outline" onclick="generateBirthdayReport()">🎂 產生壽星表</button>
+                        </div>
+                    </div>
+
+                    <!-- License Report Control -->
+                    <div class="report-group">
+                        <label>證照到期預警 (天數)</label>
+                        <div class="report-controls">
+                            <input type="number" id="reportLicenseDays" value="180" style="width: 80px;" min="1">
+                            <button class="btn btn-outline" onclick="generateLicenseReport()">⚠️ 產生到期表</button>
+                        </div>
+                    </div>
+
+                    <!-- Age/Identity Report Control -->
+                    <div class="report-group">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                            <label>年齡身份別報表</label>
+                            <div style="font-size:12px;">
+                                <label style="display:inline; margin-right:5px; cursor:pointer;"><input type="radio" name="ageMode" value="actual" checked> 足歲</label>
+                                <label style="display:inline; cursor:pointer;"><input type="radio" name="ageMode" value="virtual"> 虛歲</label>
+                            </div>
+                        </div>
+                        <div class="report-controls">
+                            <select id="agePreset" onchange="applyAgePreset()" style="width: 100px;">
+                                <option value="youth">新尖兵 (15-29)</option>
+                                <option value="senior">高齡 (45+)</option>
+                                <option value="custom">自訂</option>
+                            </select>
+                            <input type="number" id="ageMin" placeholder="Min" value="15" style="width: 70px;">
+                            <span style="color:#5f6368">-</span>
+                            <input type="number" id="ageMax" placeholder="Max" value="29" style="width: 70px;">
+                            <button class="btn btn-outline" onclick="generateAgeReport()">產生年齡名單</button>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity Report Control (New v2.04) -->
+                    <div class="report-group" style="width: 100%;">
+                        <label>近期異動報表 (Recent Activity)</label>
+                        <div class="date-pills">
+                            <span class="date-pill active" onclick="setQuickDate('last7', this)">最近7天</span>
+                            <span class="date-pill" onclick="setQuickDate('last30', this)">最近30天</span>
+                            <span class="date-pill" onclick="setQuickDate('thisMonth', this)">本月</span>
+                            <span class="date-pill" onclick="setQuickDate('lastMonth', this)">上個月</span>
+                        </div>
+                        <div class="report-controls">
+                            <select id="activityType" style="width: 140px;">
+                                <option value="member">會員資料異動</option>
+                                <option value="interview">訪談紀錄異動</option>
+                            </select>
+                            <input type="date" id="actStartDate" style="width: 130px;">
+                            <span style="color:#5f6368">至</span>
+                            <input type="date" id="actEndDate" style="width: 130px;">
+                            <button class="btn btn-outline" onclick="generateActivityReport()">📊 產生異動名單</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="padding: 0; overflow: hidden;">
+            <div style="padding: 15px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; background: #fcfcfc;">
+                <div class="view-controls" style="margin-bottom: 0; background: none; border: none; padding: 0;">
+                    <span style="font-weight: bold; margin-right: 10px;">顯示模式：</span>
+                    <label><input type="radio" name="viewMode" value="simple" checked onchange="updateViewMode()"> 精簡欄位 (預設)</label>
+                    <label><input type="radio" name="viewMode" value="all" onchange="updateViewMode()"> 所有欄位 (完整)</label>
+                </div>
+                <div>
+                     <span id="selection-status" style="margin-right: 10px; color: #5f6368; font-size: 13px;"></span>
+                     <button class="btn" style="background-color: #188038; padding: 5px 15px; font-size: 13px;" onclick="exportCurrentData()">📤 匯出表格 (Excel)</button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="resultTable">
+                    <thead>
+                        <tr>
+                            <th class="check-col nosort"><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
+                            <th class="nosort" style="width: 60px;">操作</th>
+                            <th>姓名</th>
+                            <th>性別</th>
+                            <th>生日</th>
+                            <th>手機</th>
+                            <th>職業</th>
+                            <th>居住地 (縣市)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultBody">
+                        <tr>
+                            <td colspan="8" class="empty-state">請先匯入資料並執行查詢</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="count-display" style="padding: 10px 20px; text-align: right; color: #5f6368; background: #f8f9fa; border-top: 1px solid #eee;">
+                顯示: 0 筆
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: REFERENCES -->
+    <div id="references" class="tab-content">
+        <div class="card">
+            <div class="card-title">參考資料下載</div>
+            <p style="color: #5f6368; margin-bottom: 20px;">以下為本系統的相關規格文件與範例資料。</p>
+
+            <a href="https://drive.google.com/file/d/1SxSSOxSsFQyhLe96Nr35g7rfdNg6v7mX/view?usp=sharing" target="_blank" class="btn-link-card">
+                <div class="icon">📄</div>
+                <div class="info">
+                    <strong>系統需求規格書 (2025 v1)</strong>
+                    <span>點擊開啟 Google Drive 預覽或下載 PDF</span>
+                </div>
+            </a>
+
+            <a href="https://docs.google.com/spreadsheets/d/1Lsq7clSrZTREzX5kyKgtkg__o5jFnI_x/edit?usp=sharing&ouid=107764158310255520570&rtpof=true&sd=true" target="_blank" class="btn-link-card">
+                <div class="icon">📊</div>
+                <div class="info">
+                    <strong>系統範例資料檔 (2026/1/1 版)</strong>
+                    <span>點擊開啟 Google Sheets 範例資料 (xlsx)</span>
+                </div>
+            </a>
+
+        </div>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer>
+    &copy; Force Cheng 2026/1/29 v2.04
+</footer>
+
+<!-- Modal for Details -->
+<div id="detailModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle" style="margin: 0;">會員詳情</h2>
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+        </div>
+        <div id="modalBody">
+            <!-- Dynamic Content -->
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- Global State ---
+    const DB = {
+        members: [],
+        courses: [],
+        licenses: [],
+        interviews: []
+    };
+    
+    // State for View, Sort, and Current Data
+    let currentRawData = []; // Objects containing all data for the current query
+    let currentDataType = ''; // 'search', 'birthday', 'license', 'age', 'activity_member', 'activity_interview'
+    let currentSort = { key: null, dir: 1 }; // 1: asc, -1: desc
+    let selectedMemberIds = new Set(); // Stores member_ids (or unique row keys) of checked items
+
+    // Simple View Columns Definition
+    const COLS_DEF = {
+        'search': ['姓名', '身分證字號', '性別', '生日', '手機', '職業', '居住地'],
+        'birthday': ['姓名', '生日', '手機', '地址', '職業', '業務歸屬'],
+        'license': ['姓名', '證照名稱', '到期日', '狀態', '手機'],
+        'age': ['姓名', '性別', '生日', '年齡', '手機', '居住地', '職業'],
+        'activity_member': ['姓名', '手機', '族群', '縣市', '更新時間', '更新者', '匯入批次'],
+        'activity_interview': ['姓名', '手機', '訪談日期', '訪談摘要', '下次回訪日', '更新者']
+    };
+
+    // --- Tab Switching ---
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        
+        document.getElementById(tabId).classList.add('active');
+        const buttons = document.querySelectorAll('.tab-btn');
+        if(tabId === 'import') buttons[0].classList.add('active');
+        if(tabId === 'search') buttons[1].classList.add('active');
+        if(tabId === 'references') buttons[2].classList.add('active');
+    }
+
+    // --- Init ---
+    window.onload = function() {
+        const currentMonth = new Date().getMonth() + 1;
+        const monthSelect = document.getElementById('reportMonthSelect');
+        if(monthSelect) monthSelect.value = currentMonth;
+        
+        // Init Age Preset
+        applyAgePreset();
+        // Init Activity Date (Default Last 7 days)
+        setQuickDate('last7', document.querySelector('.date-pill.active'));
+    };
+
+    // --- Helpers: Date & Format ---
+    function smartFormatDate(val, key) {
+        if (!val) return '';
+        
+        // If value implies a date (based on key name or if it looks like Excel serial)
+        const lowerKey = key ? key.toLowerCase() : '';
+        const isDateColumn = lowerKey.includes('date') || lowerKey.includes('birthday') || lowerKey.includes('time') || lowerKey.includes('_at') || lowerKey.includes('日');
+        
+        if (!isDateColumn) return val;
+
+        // Try to parse
+        let dateObj = null;
+        if (typeof val === 'number') {
+            // Excel serial dates typically > 20000 (year 1954) and < 100000
+            if (val > 20000 && val < 100000) {
+                 const date = XLSX.SSF.parse_date_code(val);
+                 dateObj = new Date(date.y, date.m - 1, date.d);
+            }
+        } else if (typeof val === 'string') {
+            // Try standard parse
+            const d = new Date(val);
+            if (!isNaN(d.getTime())) dateObj = d;
+        }
+
+        if (dateObj) {
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            
+            // For columns that might imply time (like updated_at), we could add time, but sticking to YYYY-MM-DD for consistency
+            return `${y}-${m}-${d}`;
+        }
+
+        return val; // Return original if parsing failed
+    }
+
+    // Standard parse for internal logic (comparisons)
+    function parseDate(dateInput) {
+        if (!dateInput) return null;
+        if (typeof dateInput === 'number') {
+            const date = XLSX.SSF.parse_date_code(dateInput);
+            return new Date(date.y, date.m - 1, date.d);
+        }
+        const d = new Date(dateInput);
+        return isNaN(d.getTime()) ? null : d;
+    }
+
+    function toggleLoading(show) {
+        document.getElementById('loading').style.display = show ? 'flex' : 'none';
+    }
+
+    function showToast(msg) {
+        const toast = document.getElementById('toast');
+        toast.textContent = msg;
+        toast.className = 'show';
+        setTimeout(() => { toast.className = toast.className.replace('show', ''); }, 3000);
+    }
+
+    // --- Import Logic ---
+
+    // 1. Local Import
+    function handleFileImport() {
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0];
+        if (!file) {
+            showStatus('請先選擇檔案', 'error');
+            return;
+        }
+        processWorkbook(file);
+    }
+
+    // 2. Google Sheet Import
+    async function importFromGoogleSheet() {
+        const urlInput = document.getElementById('googleSheetUrl').value.trim();
+        if (!urlInput) {
+            showStatus('請輸入 Google Sheet 連結', 'error');
+            return;
+        }
+
+        // Convert Edit URL to Export URL
+        let exportUrl = urlInput;
+        const match = urlInput.match(/\/d\/([a-zA-Z0-9-_]+)/);
+        if (match && match[1]) {
+            exportUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=xlsx`;
+        }
+
+        toggleLoading(true);
+        showStatus('正在連線至 Google Sheet...', 'warning');
+
+        try {
+            const response = await fetch(exportUrl);
+            if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
+            const blob = await response.blob();
+            const file = new File([blob], "GoogleSheet_Import.xlsx");
+            processWorkbook(file);
+        } catch (err) {
+            console.warn("Google Sheet Fetch Error (Likely CORS):", err);
+            toggleLoading(false);
+            
+            // CORS Error Fallback UI
+            const msg = `
+                <strong>⚠️ 無法直接匯入 (瀏覽器安全性限制)</strong><br>
+                由於 Google 安全政策，無法由網頁直接抓取檔案。<br>
+                系統已嘗試為您開啟下載視窗，請下載後使用【本機匯入】。<br>
+                <a href="${exportUrl}" target="_blank" style="color:#1a73e8; font-weight:bold; text-decoration:underline; margin-top:5px; display:inline-block;">👉 點此手動下載 Excel</a>
+            `;
+            showStatus(msg, 'error');
+            // Try to open window as fallback
+            window.open(exportUrl, '_blank');
+        }
+    }
+
+    function processWorkbook(file) {
+        toggleLoading(true);
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+
+                const requiredSheets = ['Members_DB', 'Courses_Records', 'Licenses', 'Interview_Logs'];
+                const missingSheets = requiredSheets.filter(sheet => !workbook.SheetNames.includes(sheet));
+
+                if (missingSheets.length > 0) {
+                    throw new Error(`檔案格式錯誤：缺少工作表 [${missingSheets.join(', ')}]`);
+                }
+
+                // Parse Sheets with header check logic for memo fields
+                const membersSheet = workbook.Sheets['Members_DB'];
+                let membersData = XLSX.utils.sheet_to_json(membersSheet, {defval:""});
+                
+                // Post-process Members to fix __EMPTY headers to memo1, memo2
+                if (membersData.length > 0) {
+                    membersData = membersData.map(row => {
+                        const newRow = {...row};
+                        if ('__EMPTY' in newRow) {
+                            newRow['memo1'] = newRow['__EMPTY'];
+                            delete newRow['__EMPTY'];
+                        }
+                        if ('__EMPTY_1' in newRow) {
+                            newRow['memo2'] = newRow['__EMPTY_1'];
+                            delete newRow['__EMPTY_1'];
+                        }
+                        return newRow;
+                    });
+                }
+                DB.members = membersData;
+
+                DB.courses = XLSX.utils.sheet_to_json(workbook.Sheets['Courses_Records'], {defval:""});
+                DB.licenses = XLSX.utils.sheet_to_json(workbook.Sheets['Licenses'], {defval:""});
+                DB.interviews = XLSX.utils.sheet_to_json(workbook.Sheets['Interview_Logs'], {defval:""});
+
+                document.getElementById('sum-filename').textContent = file.name;
+                document.getElementById('sum-time').textContent = new Date().toLocaleString();
+                document.getElementById('sum-members').textContent = DB.members.length;
+                document.getElementById('sum-courses').textContent = DB.courses.length;
+                document.getElementById('sum-licenses').textContent = DB.licenses.length;
+                document.getElementById('sum-interviews').textContent = DB.interviews.length;
+
+                document.getElementById('data-summary').style.display = 'block';
+                showStatus('匯入成功！資料庫已建立。', 'success');
+                document.getElementById('system-status').textContent = `已載入: ${file.name} (會員數: ${DB.members.length})`;
+
+                setTimeout(() => switchTab('search'), 1000);
+                executeSearch();
+
+            } catch (err) {
+                console.error(err);
+                showStatus('匯入失敗：' + err.message, 'error');
+            } finally {
+                toggleLoading(false);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function showStatus(msg, type) {
+        const el = document.getElementById('import-status');
+        el.innerHTML = msg; // Allow HTML for links
+        el.className = 'status-box ' + (type === 'success' ? 'status-success' : (type === 'warning' ? 'status-warning' : 'status-error'));
+        el.style.display = 'block';
+    }
+
+
+    // --- Search & Report Logic ---
+
+    function executeSearch() {
+        if (DB.members.length === 0) { alert("請先匯入資料"); return; }
+
+        const keyword = document.getElementById('searchInput').value.toLowerCase().trim();
+        const month = document.getElementById('monthFilter').value;
+        const eth = document.getElementById('ethnicityFilter').value;
+
+        const results = DB.members.filter(m => {
+            const name = (m.name || '').toLowerCase();
+            const idNo = (m.id_number || '').toLowerCase();
+            const mobile = String(m.mobile_phone || '');
+            const matchKw = !keyword || name.includes(keyword) || idNo.includes(keyword) || mobile.includes(keyword);
+            
+            let matchMonth = true;
+            if (month) {
+                const bday = parseDate(m.birthday);
+                matchMonth = bday ? (bday.getMonth() + 1) == parseInt(month) : false;
+            }
+
+            const matchEth = !eth || (m.ethnicity == eth);
+            return matchKw && matchMonth && matchEth;
+        });
+
+        processDataForView(results, 'search');
+    }
+
+    function generateBirthdayReport() {
+        if (DB.members.length === 0) { alert("無資料"); return; }
+        
+        const targetMonth = document.getElementById('reportMonthSelect').value;
+
+        const results = DB.members.filter(m => {
+            const bday = parseDate(m.birthday);
+            return bday && (bday.getMonth() + 1) == parseInt(targetMonth);
+        });
+
+        processDataForView(results, 'birthday');
+    }
+
+    function generateLicenseReport() {
+        if (DB.licenses.length === 0) { alert("無資料"); return; }
+
+        const daysInput = document.getElementById('reportLicenseDays').value;
+        const days = parseInt(daysInput) || 180;
+        const today = new Date();
+        const targetDate = new Date();
+        targetDate.setDate(today.getDate() + days);
+
+        const reportData = [];
+
+        DB.licenses.forEach(lic => {
+            const expiry = parseDate(lic.expiry_date);
+            if (expiry && expiry >= today && expiry <= targetDate) {
+                const member = DB.members.find(m => m.member_id === lic.member_id);
+                if (member) {
+                    reportData.push({
+                        ...member,
+                        ...lic // License info overrides if keys conflict
+                    });
+                }
+            }
+        });
+
+        processDataForView(reportData, 'license');
+        // Default sort for license report
+        currentSort = { key: 'expiry_date', dir: 1 };
+        sortData('expiry_date', false);
+        renderCurrentTable();
+    }
+
+    // --- New Age Report Logic ---
+    function applyAgePreset() {
+        const val = document.getElementById('agePreset').value;
+        const minInput = document.getElementById('ageMin');
+        const maxInput = document.getElementById('ageMax');
+
+        if(val === 'youth') { minInput.value = 15; maxInput.value = 29; }
+        else if(val === 'senior') { minInput.value = 45; maxInput.value = ''; }
+        else if(val === 'custom') { minInput.value = 18; maxInput.value = 99; }
+    }
+
+    function generateAgeReport() {
+        if (DB.members.length === 0) { alert("無資料"); return; }
+
+        const minStr = document.getElementById('ageMin').value;
+        const maxStr = document.getElementById('ageMax').value;
+        const mode = document.querySelector('input[name="ageMode"]:checked').value; // 'actual' or 'virtual'
+
+        const min = parseInt(minStr) || 0;
+        const max = maxStr === '' ? Infinity : (parseInt(maxStr) || Infinity);
+
+        if (min > max) { alert("最小年齡不能大於最大年齡"); return; }
+
+        const today = new Date();
+        const thisYear = today.getFullYear();
+        const ageList = [];
+
+        DB.members.forEach(m => {
+            const bday = parseDate(m.birthday);
+            if (!bday) return; // Skip if no birthday
+
+            // Calculate Actual Age
+            let age = thisYear - bday.getFullYear();
+            const hasHadBirthday = (today.getMonth() > bday.getMonth()) ||
+                                   (today.getMonth() === bday.getMonth() && today.getDate() >= bday.getDate());
+            if (!hasHadBirthday) age--;
+
+            // Calculate Virtual Age if needed (Actual + 1)
+            if (mode === 'virtual') {
+                age = age + 1;
+            }
+
+            if (age >= min && age <= max) {
+                ageList.push({ ...m, calculatedAge: age });
+            }
+        });
+
+        // Use custom property for Age display
+        processDataForView(ageList, 'age');
+    }
+
+    // --- Recent Activity Report Logic (v2.04) ---
+    function setQuickDate(type, el) {
+        // Toggle Active Class
+        document.querySelectorAll('.date-pill').forEach(p => p.classList.remove('active'));
+        if(el) el.classList.add('active');
+
+        const today = new Date();
+        let start = new Date();
+        let end = new Date();
+
+        if (type === 'last7') {
+            start.setDate(today.getDate() - 6);
+        } else if (type === 'last30') {
+            start.setDate(today.getDate() - 29);
+        } else if (type === 'thisMonth') {
+            start = new Date(today.getFullYear(), today.getMonth(), 1);
+        } else if (type === 'lastMonth') {
+            start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            end = new Date(today.getFullYear(), today.getMonth(), 0);
+        }
+
+        // Format to YYYY-MM-DD
+        const fmt = d => d.toISOString().split('T')[0];
+        document.getElementById('actStartDate').value = fmt(start);
+        document.getElementById('actEndDate').value = fmt(end);
+    }
+
+    function generateActivityReport() {
+        if (DB.members.length === 0) { alert("無資料"); return; }
+
+        const startStr = document.getElementById('actStartDate').value;
+        const endStr = document.getElementById('actEndDate').value;
+        const type = document.getElementById('activityType').value;
+
+        if (!startStr || !endStr) { alert("請選擇日期區間"); return; }
+        if (startStr > endStr) { alert("起始日期不能大於結束日期"); return; }
+
+        const startDate = new Date(startStr);
+        const endDate = new Date(endStr);
+        // End date should include the whole day, so set to next day or compare strings carefully.
+        // Assuming data is YYYY-MM-DD, string comparison works well. 
+        // Or normalize time components.
+        startDate.setHours(0,0,0,0);
+        endDate.setHours(23,59,59,999);
+
+        let reportData = [];
+
+        if (type === 'member') {
+            // 1. Member Changes
+            reportData = DB.members.filter(m => {
+                const dateVal = parseDate(m.updated_at);
+                if (!dateVal) return false;
+                return dateVal >= startDate && dateVal <= endDate;
+            });
+            processDataForView(reportData, 'activity_member');
+
+        } else if (type === 'interview') {
+            // 2. Interview Changes
+            DB.interviews.forEach(i => {
+                const dateVal = parseDate(i.interview_date);
+                if (dateVal && dateVal >= startDate && dateVal <= endDate) {
+                    const member = DB.members.find(m => m.member_id === i.member_id);
+                    // Join Member Data (even if member missing, keep record)
+                    reportData.push({
+                        ...member, // Member fields (like name, mobile)
+                        ...i, // Interview fields override overlapping keys (like updated_at)
+                        // Ensure Interview specific fields are prioritized for Simple View
+                        '姓名': member ? member.name : '(未知會員)',
+                        '手機': member ? member.mobile_phone : '',
+                        '訪談日期': i.interview_date,
+                        '訪談摘要': i.content ? (i.content.length > 30 ? i.content.substring(0,30)+'...' : i.content) : '',
+                        '下次回訪日': i.next_followup_date,
+                        '更新者': i.sales_rep_name || i.sales_rep_user_id || i.updated_by
+                    });
+                }
+            });
+            processDataForView(reportData, 'activity_interview');
+        }
+    }
+
+    // Prepare data, fix formats, set mode
+    function processDataForView(rawData, type) {
+        // Map raw data to display data (smart format dates)
+        currentRawData = rawData.map(row => {
+            const newRow = { ...row };
+            
+            // Map common keys to friendly names if needed, or stick to raw keys + smart formatting
+
+            // Ensure "Simple View" keys are populated
+            if (type === 'search') {
+                newRow['姓名'] = row.name;
+                newRow['身分證字號'] = row.id_number;
+                newRow['性別'] = row.gender;
+                newRow['生日'] = smartFormatDate(row.birthday, 'birthday');
+                newRow['手機'] = row.mobile_phone;
+                newRow['職業'] = row.occupation;
+                newRow['居住地'] = (row.address_city || '') + (row.address_district || '');
+            } else if (type === 'birthday') {
+                newRow['姓名'] = row.name;
+                newRow['生日'] = smartFormatDate(row.birthday, 'birthday');
+                newRow['手機'] = row.mobile_phone;
+                newRow['地址'] = (row.address_city || '') + (row.address_district || '');
+                newRow['職業'] = row.occupation;
+                newRow['業務歸屬'] = row.assigned_to;
+            } else if (type === 'license') {
+                newRow['姓名'] = row.name;
+                newRow['證照名稱'] = row.license_type;
+                newRow['到期日'] = smartFormatDate(row.expiry_date, 'expiry_date');
+                newRow['狀態'] = row.license_status;
+                newRow['手機'] = row.mobile_phone;
+            } else if (type === 'age') {
+                newRow['姓名'] = row.name;
+                newRow['性別'] = row.gender;
+                newRow['生日'] = smartFormatDate(row.birthday, 'birthday');
+                newRow['年齡'] = row.calculatedAge; // Use calculated age
+                newRow['手機'] = row.mobile_phone;
+                newRow['居住地'] = (row.address_city || '') + (row.address_district || '');
+                newRow['職業'] = row.occupation;
+            } else if (type === 'activity_member') {
+                newRow['姓名'] = row.name;
+                newRow['手機'] = row.mobile_phone;
+                newRow['族群'] = row.ethnicity;
+                newRow['縣市'] = row.address_city;
+                newRow['更新時間'] = smartFormatDate(row.updated_at, 'updated_at');
+                newRow['更新者'] = row.updated_by;
+                newRow['匯入批次'] = row.etl_id_ref;
+            } else if (type === 'activity_interview') {
+                // Already populated in generateActivityReport loop, but ensuring format
+                // newRow props like '訪談摘要' are already set above.
+                // Just formatting dates
+                newRow['訪談日期'] = smartFormatDate(row.interview_date, 'interview_date');
+                newRow['下次回訪日'] = smartFormatDate(row.next_followup_date, 'next_followup_date');
+            }
+
+            return newRow;
+        });
+
+        currentDataType = type;
+        currentSort = { key: null, dir: 1 };
+        selectedMemberIds.clear(); // Reset selection on new search
+        updateSelectionStatus();
+        renderCurrentTable();
+    }
+
+
+    // --- Rendering & View Logic ---
+    
+    function updateViewMode() {
+        renderCurrentTable();
+    }
+
+    function getHeaders() {
+        const mode = document.querySelector('input[name="viewMode"]:checked').value;
+        
+        if (mode === 'simple') {
+            return COLS_DEF[currentDataType] || [];
+        } else {
+            // All Mode
+            if (currentRawData.length === 0) return [];
+            const allKeys = Object.keys(currentRawData[0]);
+            const simpleKeys = COLS_DEF[currentDataType] || [];
+            
+            // Exclude calculated or friendly fields from 'All' view to keep it raw-like?
+            // Actually, user wants "All Columns".
+            // We should filter out the chinese key names we added if they duplicate data, but user might want them.
+            // Let's just show everything but prioritize simple keys.
+            return [...simpleKeys, ...allKeys.filter(k => !simpleKeys.includes(k) && k !== 'calculatedAge')];
+        }
+    }
+
+    function sortData(key, redraw = true) {
+        if (currentSort.key === key) {
+            currentSort.dir *= -1;
+        } else {
+            currentSort.key = key;
+            currentSort.dir = 1;
+        }
+
+        currentRawData.sort((a, b) => {
+            let valA = a[key];
+            let valB = b[key];
+
+            // If we are sorting by a key that is NOT in simple view, it might not be formatted yet in simple view properties.
+            
+            if (valA === undefined || valA === null) valA = '';
+            if (valB === undefined || valB === null) valB = '';
+
+            const isNum = (v) => !isNaN(parseFloat(v)) && isFinite(v);
+            if (isNum(valA) && isNum(valB)) {
+                return (parseFloat(valA) - parseFloat(valB)) * currentSort.dir;
+            }
+            return String(valA).localeCompare(String(valB), 'zh-Hant') * currentSort.dir;
+        });
+
+        if (redraw) renderCurrentTable();
+    }
+
+    function renderCurrentTable() {
+        const thead = document.querySelector('#resultTable thead tr');
+        const tbody = document.getElementById('resultBody');
+        const countDisplay = document.getElementById('count-display');
+        const selectAllBox = document.getElementById('selectAll');
+
+        const headers = getHeaders();
+        
+        // Update Select All Checkbox state
+        const allSelected = currentRawData.length > 0 && currentRawData.every(row => selectedMemberIds.has(getRowId(row)));
+        selectAllBox.checked = allSelected;
+
+        // 1. Draw Headers (keep checkbox col at index 0)
+        // Clear all except first th (checkbox)
+        while (thead.children.length > 1) {
+            thead.removeChild(thead.lastChild);
+        }
+
+        // Add Detail Column (Now at position 1, after checkbox)
+        const thAction = document.createElement('th');
+        thAction.textContent = "操作";
+        thAction.className = "nosort";
+        thAction.style.width = "60px"; // Optional fixed width
+        thead.appendChild(thAction);
+
+        headers.forEach(h => {
+            const th = document.createElement('th');
+            th.textContent = h;
+            th.onclick = () => sortData(h);
+            if (currentSort.key === h) {
+                th.classList.add(currentSort.dir === 1 ? 'sort-asc' : 'sort-desc');
+            }
+            thead.appendChild(th);
+        });
+
+        // 2. Draw Rows
+        tbody.innerHTML = '';
+        if (currentRawData.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="${headers.length + 2}" class="empty-state">無資料</td></tr>`;
+            countDisplay.textContent = '顯示: 0 筆';
+            return;
+        }
+
+        currentRawData.forEach(row => {
+            const tr = document.createElement('tr');
+            const rowId = getRowId(row);
+            const isChecked = selectedMemberIds.has(rowId);
+
+            // Checkbox Cell
+            const tdCheck = document.createElement('td');
+            tdCheck.className = 'check-col';
+            tdCheck.innerHTML = `<input type="checkbox" ${isChecked ? 'checked' : ''} onclick="toggleSelectRow('${rowId}', event)">`;
+            tr.appendChild(tdCheck);
+
+            // Action Cell (Moved to left)
+            const tdAction = document.createElement('td');
+            tdAction.innerHTML = `<button class="btn btn-outline" style="padding: 2px 8px; font-size: 12px;" onclick="event.stopPropagation(); showMemberDetails('${row.member_id}')">查看</button>`;
+            tr.appendChild(tdAction);
+
+            // Data Cells
+            headers.forEach(h => {
+                const td = document.createElement('td');
+                td.className = 'copyable'; // Add copy class for hover effect
+                
+                // Apply smart formatting for display (especially for 'All' view raw columns)
+                let val = row[h];
+                val = smartFormatDate(val, h);
+                const displayVal = val !== undefined && val !== null ? val : '';
+                
+                td.textContent = displayVal;
+                
+                // Add click to copy
+                td.onclick = (e) => {
+                    e.stopPropagation(); // Stop row click (open detail)
+                    copyToClipboard(displayVal);
+                };
+                
+                tr.appendChild(td);
+            });
+
+            // Row click toggles check? No, row click usually opens detail. 
+            // Let's make row click open detail, check click toggle check.
+            tr.onclick = (e) => {
+                if (e.target.type !== 'checkbox' && e.target.tagName !== 'BUTTON') {
+                    showMemberDetails(row.member_id);
+                }
+            };
+
+            tbody.appendChild(tr);
+        });
+
+        countDisplay.textContent = `顯示: ${currentRawData.length} 筆`;
+        updateSelectionStatus();
+    }
+
+    function copyToClipboard(text) {
+        if (!text) return;
+        
+        // Use modern clipboard API if available, fallback to execCommand
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(String(text)).then(() => {
+                showToast(`已複製: ${text}`);
+            }, (err) => {
+                console.error('Async: Could not copy text: ', err);
+                fallbackCopyTextToClipboard(text);
+            });
+        } else {
+            fallbackCopyTextToClipboard(text);
+        }
+    }
+
+    function fallbackCopyTextToClipboard(text) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        
+        // Ensure textarea is not visible but part of DOM
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) showToast(`已複製: ${text}`);
+        } catch (err) {
+            console.error('Fallback: Oops, unable to copy', err);
+        }
+
+        document.body.removeChild(textArea);
+    }
+
+    // --- Checkbox Logic ---
+    function getRowId(row) {
+        // Use member_id if available, otherwise fallback to license_id or random unique if needed
+        // For mixed views (license report), row usually has member_id joined.
+        return row.member_id || row.license_id || JSON.stringify(row);
+    }
+
+    function toggleSelectAll() {
+        const selectAllBox = document.getElementById('selectAll');
+        const isChecked = selectAllBox.checked;
+        
+        currentRawData.forEach(row => {
+            const id = getRowId(row);
+            if (isChecked) selectedMemberIds.add(id);
+            else selectedMemberIds.delete(id);
+        });
+        renderCurrentTable(); // Re-render to update boxes
+    }
+
+    window.toggleSelectRow = function(id, event) {
+        event.stopPropagation(); // Stop row click
+        if (selectedMemberIds.has(id)) selectedMemberIds.delete(id);
+        else selectedMemberIds.add(id);
+        
+        updateSelectionStatus();
+        
+        // Update Select All box state without full re-render
+        const selectAllBox = document.getElementById('selectAll');
+        const allSelected = currentRawData.length > 0 && currentRawData.every(row => selectedMemberIds.has(getRowId(row)));
+        selectAllBox.checked = allSelected;
+    }
+
+    function updateSelectionStatus() {
+        const el = document.getElementById('selection-status');
+        if (selectedMemberIds.size > 0) {
+            el.textContent = `已勾選: ${selectedMemberIds.size} 筆`;
+            el.style.color = 'var(--primary-color)';
+            el.style.fontWeight = 'bold';
+        } else {
+            el.textContent = '';
+        }
+    }
+
+    // --- Modal Logic ---
+    function showMemberDetails(memberId) {
+        if(!memberId) return;
+        const member = DB.members.find(m => m.member_id === memberId);
+        if (!member) return;
+
+        const myCourses = DB.courses.filter(c => c.member_id === memberId);
+        const myLicenses = DB.licenses.filter(l => l.member_id === memberId);
+        const myInterviews = DB.interviews.filter(i => i.member_id === memberId);
+
+        const modalBody = document.getElementById('modalBody');
+        document.getElementById('modalTitle').textContent = `${member.name} (${member.member_id})`;
+
+        // Updated Helper for Copyable Detail Item
+        const item = (label, val) => {
+            const displayVal = val || '-';
+            const copyClass = val ? 'copyable-text' : ''; // Only copy if value exists
+            const clickAttr = val ? `onclick="copyToClipboard('${val}')"` : '';
+            return `<div class="detail-item"><strong>${label}</strong><span class="${copyClass}" ${clickAttr} title="點擊複製">${displayVal}</span></div>`;
+        };
+        const fmt = (v, k) => smartFormatDate(v, k);
+
+        let html = `
+            <div class="detail-section">
+                <h3>基本資料</h3>
+                <div class="detail-grid">
+                    ${item('身分證字號', member.id_number)}
+                    ${item('性別', member.gender)}
+                    ${item('生日', fmt(member.birthday, 'birthday'))}
+                    ${item('手機', member.mobile_phone)}
+                    ${item('市話', member.home_phone)}
+                    ${item('Email', member.email)}
+                    ${item('地址', (member.address_city||'') + (member.address_district||'') + (member.address_detail||''))}
+                    ${item('職業', member.occupation)}
+                    ${item('公司', member.company_name)}
+                    ${item('職稱', member.job_title)}
+                    ${item('學歷', member.education_level)}
+                    ${item('業務歸屬', member.assigned_to)}
+                    ${item('Memo 1', member.memo1)}
+                    ${item('Memo 2', member.memo2)}
+                </div>
+            </div>
+        `;
+
+        html += `<div class="detail-section"><h3>課程紀錄 (${myCourses.length})</h3>`;
+        if (myCourses.length > 0) {
+            html += `<table style="font-size: 12px;">
+                <thead><tr><th>年度</th><th>課程名稱</th><th>類別</th><th>狀態</th><th>繳費</th></tr></thead>
+                <tbody>${myCourses.map(c => `
+                    <tr>
+                        <td class="copyable" onclick="copyToClipboard('${c.course_year}')">${c.course_year}</td>
+                        <td class="copyable" onclick="copyToClipboard('${c.course_name}')">${c.course_name}</td>
+                        <td class="copyable" onclick="copyToClipboard('${c.course_category_l2}')">${c.course_category_l2}</td>
+                        <td class="copyable" onclick="copyToClipboard('${c.enrollment_status}')">${c.enrollment_status}</td>
+                        <td class="copyable" onclick="copyToClipboard('${c.payment_status}')">${c.payment_status}</td>
+                    </tr>`).join('')}
+                </tbody></table>`;
+        } else { html += `<p style="color:#999;">無課程紀錄</p>`; }
+        html += `</div>`;
+
+        html += `<div class="detail-section"><h3>證照資料 (${myLicenses.length})</h3>`;
+        if (myLicenses.length > 0) {
+            html += `<table style="font-size: 12px;">
+                <thead><tr><th>證照類型</th><th>到期日</th><th>狀態</th></tr></thead>
+                <tbody>${myLicenses.map(l => `
+                    <tr>
+                        <td class="copyable" onclick="copyToClipboard('${l.license_type}')">${l.license_type}</td>
+                        <td class="copyable" onclick="copyToClipboard('${fmt(l.expiry_date, 'expiry_date')}')">${fmt(l.expiry_date, 'expiry_date')}</td>
+                        <td style="color:${l.license_status==='有效'?'green':'red'}" class="copyable" onclick="copyToClipboard('${l.license_status}')">${l.license_status}</td>
+                    </tr>`).join('')}
+                </tbody></table>`;
+        } else { html += `<p style="color:#999;">無證照資料</p>`; }
+        html += `</div>`;
+
+        html += `<div class="detail-section"><h3>訪談紀錄 (${myInterviews.length})</h3>`;
+        if (myInterviews.length > 0) {
+            html += `<table style="font-size: 12px;">
+                <thead><tr><th>日期</th><th>方式</th><th>內容摘要</th><th>業務</th></tr></thead>
+                <tbody>${myInterviews.map(i => `
+                    <tr>
+                        <td class="copyable" onclick="copyToClipboard('${fmt(i.interview_date, 'interview_date')}')">${fmt(i.interview_date, 'interview_date')}</td>
+                        <td class="copyable" onclick="copyToClipboard('${i.method}')">${i.method}</td>
+                        <td style="white-space:normal;" class="copyable" onclick="copyToClipboard('${i.content}')">${i.content}</td>
+                        <td class="copyable" onclick="copyToClipboard('${i.sales_rep}')">${i.sales_rep}</td>
+                    </tr>`).join('')}
+                </tbody></table>`;
+        } else { html += `<p style="color:#999;">無訪談紀錄</p>`; }
+        html += `</div>`;
+
+        modalBody.innerHTML = html;
+        document.getElementById('detailModal').style.display = 'block';
+    }
+
+    function closeModal() {
+        document.getElementById('detailModal').style.display = 'none';
+    }
+
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('detailModal')) {
+            closeModal();
+        }
+    }
+
+    // --- Export Logic ---
+    function exportCurrentData() {
+        if (!currentRawData || currentRawData.length === 0) {
+            alert("目前列表無資料可匯出");
+            return;
+        }
+
+        const headers = getHeaders();
+        
+        // Filter logic: If any checkbox selected, filter by ID. Else all.
+        let exportSource = currentRawData;
+        if (selectedMemberIds.size > 0) {
+            exportSource = currentRawData.filter(row => selectedMemberIds.has(getRowId(row)));
+        }
+
+        // Map data
+        // For Activity Reports: User wants "Full Version" regardless of display mode.
+        // If currentDataType is activity_member or activity_interview, we need to export ALL joined fields.
+        // However, "Full View" in UI already exposes all keys.
+        // If "Simple View" is active, getHeaders() returns fewer cols.
+        // We should detect this and use a broader set of headers if exporting an Activity Report.
+        
+        let exportHeaders = headers;
+        if (currentDataType === 'activity_member' || currentDataType === 'activity_interview') {
+             // Force use all keys from the first row of source data
+             if (exportSource.length > 0) {
+                 const allKeys = Object.keys(exportSource[0]);
+                 // Filter out our UI-specific 'friendly names' if we want raw data, OR keep them.
+                 // The requirement says "Members_DB 的全部欄位".
+                 // currentRawData has merged fields. Let's just dump everything available in the object for simplicity and completeness.
+                 exportHeaders = allKeys.filter(k => k !== 'calculatedAge' && !COLS_DEF[currentDataType].includes(k)); // internal props
+                 // Combine friendly headers + raw headers
+                 exportHeaders = [...COLS_DEF[currentDataType], ...exportHeaders];
+             }
+        }
+
+        const exportData = exportSource.map(row => {
+            const newRow = {};
+            exportHeaders.forEach(h => {
+                // Use smart formatted value for export too
+                newRow[h] = smartFormatDate(row[h], h);
+            });
+            return newRow;
+        });
+
+        const suffix = selectedMemberIds.size > 0 ? '_Selected' : '_All';
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "ExportData");
+        XLSX.writeFile(wb, `CRM_Export${suffix}_${new Date().toISOString().slice(0,10)}.xlsx`);
+    }
+
+</script>
+
+</body>
+</html>
